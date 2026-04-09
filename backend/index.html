@@ -7,11 +7,15 @@
     <style>
         :root {
             --primary: #2563eb;
+            --primary-dark: #1d4ed8;
             --bg: #f8fafc;
             --text: #1e293b;
             --danger: #dc2626;
             --surface: #ffffff;
             --border: #e2e8f0;
+            --listen-bg: #e0f2fe;
+            --listen-border: #bae6fd;
+            --listen-text: #0369a1;
         }
 
         body {
@@ -48,7 +52,66 @@
             box-shadow: 0 4px 6px rgba(220, 38, 38, 0.2);
         }
 
-        /* Área de gerenciamento (Adicionar categorias e frases) */
+        /* ----- NOVO: Painel de Escuta (Speech-to-Text) ----- */
+        .transcription-panel {
+            background-color: var(--listen-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid var(--listen-border);
+            margin-bottom: 30px;
+        }
+
+        .transcription-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .transcription-header h3 {
+            margin: 0;
+            color: var(--listen-text);
+        }
+
+        .btn-listen {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Animação para indicar que o microfone está ligado */
+        .btn-listen.listening {
+            background-color: var(--danger);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); box-shadow: 0 0 10px rgba(220, 38, 38, 0.5); }
+            100% { transform: scale(1); }
+        }
+
+        .transcription-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 60px;
+            font-size: 1.1rem;
+            color: #334155;
+            border: 1px solid var(--border);
+        }
+        /* --------------------------------------------------- */
+
         .admin-panel {
             background-color: var(--surface);
             padding: 20px;
@@ -98,7 +161,6 @@
             opacity: 0.9;
         }
 
-        /* Estilos da lista gerada dinamicamente */
         .category-title {
             font-size: 1.2rem;
             border-bottom: 2px solid var(--border);
@@ -140,6 +202,18 @@
             <button class="sos-btn" onclick="falar('Preciso de ajuda imediata!')">🚨 SOS</button>
         </header>
 
+        <div class="transcription-panel">
+            <div class="transcription-header">
+                <h3>Modo Ouvir</h3>
+                <button id="btn-ouvir" class="btn-listen" onclick="alternarEscuta()">
+                    🎤 Iniciar Escuta
+                </button>
+            </div>
+            <div id="texto-transcrito" class="transcription-box">
+                O que a outra pessoa falar aparecerá aqui...
+            </div>
+        </div>
+
         <div class="admin-panel">
             <h3>Adicionar Nova Categoria</h3>
             <div class="form-group">
@@ -149,8 +223,7 @@
 
             <h3>Adicionar Nova Frase</h3>
             <div class="form-group">
-                <select id="select-categoria">
-                    </select>
+                <select id="select-categoria"></select>
                 <input type="text" id="input-nova-frase" placeholder="Ex: Estou cansado">
                 <button class="btn-add" onclick="adicionarFrase()">Salvar Frase</button>
             </div>
@@ -161,99 +234,62 @@
 
     <script>
         // 1. DADOS INICIAIS E LOCALSTORAGE
-        // Tenta carregar do localStorage. Se não existir, usa esses dados padrão.
         const dadosPadrao = [
-            {
-                id: Date.now().toString(), // Gera um ID único
-                nome: "Saudações",
-                frases: ["Olá, tudo bem?", "Bom dia", "Boa tarde", "Até logo"]
-            },
-            {
-                id: (Date.now() + 1).toString(),
-                nome: "Necessidades",
-                frases: ["Pode repetir, por favor?", "Preciso de água", "Onde fica o banheiro?"]
-            },
-            {
-                id: (Date.now() + 2).toString(),
-                nome: "Respostas Rápidas",
-                frases: ["Sim", "Não", "Talvez", "Não sei"]
-            }
+            { id: "1", nome: "Saudações", frases: ["Olá, tudo bem?", "Bom dia", "Boa tarde"] },
+            { id: "2", nome: "Necessidades", frases: ["Pode repetir, por favor?", "Preciso de água"] },
+            { id: "3", nome: "Respostas Rápidas", frases: ["Sim", "Não", "Talvez"] }
         ];
 
-        // Inicializa nosso "banco de dados" local
         let dadosApp = JSON.parse(localStorage.getItem('comunicadorData')) || dadosPadrao;
 
-        // Função para salvar sempre que houver alteração
         function salvarDados() {
             localStorage.setItem('comunicadorData', JSON.stringify(dadosApp));
-            renderizarTela(); // Atualiza a tela após salvar
+            renderizarTela();
         }
 
-        // 2. FUNÇÕES DE ADICIONAR (CRUD Básico)
+        // 2. FUNÇÕES DE ADICIONAR (CRUD)
         function adicionarCategoria() {
             const input = document.getElementById('input-nova-categoria');
             const nomeCategoria = input.value.trim();
-
             if (nomeCategoria !== "") {
-                const novaCat = {
-                    id: Date.now().toString(),
-                    nome: nomeCategoria,
-                    frases: [] // Começa sem frases
-                };
-                
-                dadosApp.push(novaCat);
-                input.value = ""; // Limpa o campo
+                dadosApp.push({ id: Date.now().toString(), nome: nomeCategoria, frases: [] });
+                input.value = ""; 
                 salvarDados();
-            } else {
-                alert("Por favor, digite um nome para a categoria.");
             }
         }
 
         function adicionarFrase() {
             const select = document.getElementById('select-categoria');
             const input = document.getElementById('input-nova-frase');
-            const idCategoriaSelecionada = select.value;
-            const textoFrase = input.value.trim();
-
-            if (textoFrase !== "" && idCategoriaSelecionada !== "") {
-                // Encontra a categoria correta pelo ID e adiciona a frase no array dela
-                const categoria = dadosApp.find(cat => cat.id === idCategoriaSelecionada);
-                if (categoria) {
-                    categoria.frases.push(textoFrase);
-                    input.value = ""; // Limpa o campo
-                    salvarDados();
-                }
-            } else {
-                alert("Por favor, selecione uma categoria e digite uma frase.");
+            const categoria = dadosApp.find(cat => cat.id === select.value);
+            
+            if (categoria && input.value.trim() !== "") {
+                categoria.frases.push(input.value.trim());
+                input.value = ""; 
+                salvarDados();
             }
         }
 
-        // 3. RENDERIZAÇÃO DA TELA
-        // Transforma nossos dados em HTML e joga na tela
+        // 3. RENDERIZAÇÃO
         function renderizarTela() {
             const main = document.getElementById('app-content');
             const selectCategoria = document.getElementById('select-categoria');
             
-            // Limpa tudo antes de desenhar de novo
             main.innerHTML = "";
             selectCategoria.innerHTML = "";
 
             dadosApp.forEach(categoria => {
-                // Preenche o Select (dropdown) para adicionar frases
                 const option = document.createElement('option');
                 option.value = categoria.id;
                 option.textContent = categoria.nome;
                 selectCategoria.appendChild(option);
 
-                // Só desenha a categoria na tela principal se ela tiver frases
                 if (categoria.frases.length > 0) {
-                    // Cria o título da categoria
                     const h2 = document.createElement('h2');
                     h2.className = 'category-title';
                     h2.textContent = categoria.nome;
                     main.appendChild(h2);
 
-                    // Cria o grid de botões
                     const grid = document.createElement('div');
                     grid.className = 'grid';
 
@@ -261,30 +297,113 @@
                         const button = document.createElement('button');
                         button.className = 'phrase-btn';
                         button.textContent = frase;
-                        // O segredo do áudio está aqui: atrelamos a função falar() ao clique
                         button.onclick = () => falar(frase);
                         grid.appendChild(button);
                     });
-
                     main.appendChild(grid);
                 }
             });
         }
 
-        // 4. FUNCIONALIDADE DE VOZ (Text-to-Speech)
-        function falar(texto) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel(); // Para a fala anterior
-                const mensagem = new SpeechSynthesisUtterance(texto);
-                mensagem.lang = 'pt-BR'; 
-                window.speechSynthesis.speak(mensagem);
+        // 4. FUNCIONALIDADE DE VOZ E TRANSCRIÇÃO (US02 e US03)
+        let reconhecimento = null;
+        let escutando = false;
+
+        // Configuração do Speech-to-Text (Ouvir)
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRecognition) {
+            reconhecimento = new SpeechRecognition();
+            reconhecimento.lang = 'pt-BR';
+            reconhecimento.continuous = true;     // Fica ouvindo continuamente
+            reconhecimento.interimResults = true; // Mostra resultados parciais enquanto a pessoa fala
+
+            reconhecimento.onstart = () => {
+                escutando = true;
+                const btn = document.getElementById('btn-ouvir');
+                btn.innerHTML = "🛑 Parar Escuta";
+                btn.classList.add('listening');
+                document.getElementById('texto-transcrito').textContent = "Ouvindo...";
+            };
+
+            reconhecimento.onresult = (event) => {
+                let textoFinal = "";
+                let textoIntermediario = "";
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        textoFinal += event.results[i][0].transcript;
+                    } else {
+                        textoIntermediario += event.results[i][0].transcript;
+                    }
+                }
+
+                const display = document.getElementById('texto-transcrito');
+                if (textoFinal !== "") {
+                    // Mantém o histórico do que foi falado
+                    display.innerHTML += `<strong>${textoFinal} </strong><br>`;
+                } else {
+                    display.innerHTML += `<span>${textoIntermediario}</span>`;
+                }
+            };
+
+            reconhecimento.onend = () => {
+                // Se o usuário não mandou parar manualmente, reinicia para continuar ouvindo
+                if (escutando) {
+                    reconhecimento.start();
+                } else {
+                    finalizarUIEscuta();
+                }
+            };
+
+            reconhecimento.onerror = (event) => {
+                console.error("Erro no reconhecimento: ", event.error);
+                escutando = false;
+                finalizarUIEscuta();
+                if (event.error === 'not-allowed') {
+                    alert("Por favor, permita o uso do microfone no seu navegador.");
+                }
+            };
+        } else {
+            document.getElementById('btn-ouvir').style.display = 'none';
+            document.getElementById('texto-transcrito').textContent = "Seu navegador não suporta transcrição de voz.";
+        }
+
+        function alternarEscuta() {
+            if (!reconhecimento) return;
+            
+            if (escutando) {
+                escutando = false;
+                reconhecimento.stop();
             } else {
-                alert('Seu navegador não suporta a funcionalidade de voz.');
+                // Limpa a caixa antes de começar a ouvir novamente
+                document.getElementById('texto-transcrito').innerHTML = ""; 
+                reconhecimento.start();
+            }
+        }
+
+        function finalizarUIEscuta() {
+            const btn = document.getElementById('btn-ouvir');
+            btn.innerHTML = "🎤 Iniciar Escuta";
+            btn.classList.remove('listening');
+        }
+
+        // Modificação no Text-to-Speech (Falar)
+        function falar(texto) {
+            // Regra Crítica: Se for falar, para de ouvir para não transcrever a voz do robô
+            if (escutando && reconhecimento) {
+                escutando = false;
+                reconhecimento.stop();
+            }
+
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const mensagem = new SpeechSynthesisUtterance(texto);
+                mensagem.lang = 'pt-BR';
+                window.speechSynthesis.speak(mensagem);
             }
         }
 
         // 5. INICIALIZAÇÃO
-        // Quando a página carregar pela primeira vez, desenha a tela
         renderizarTela();
 
     </script>
