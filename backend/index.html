@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comunicador Inclusivo MVP</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --text: #1e293b;
+            --danger: #dc2626;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .sos-btn {
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(220, 38, 38, 0.2);
+        }
+
+        /* Área de gerenciamento (Adicionar categorias e frases) */
+        .admin-panel {
+            background-color: var(--surface);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 30px;
+        }
+
+        .admin-panel h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .form-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        input, select {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+            min-width: 200px;
+        }
+
+        .btn-add {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
+
+        .btn-add:hover {
+            opacity: 0.9;
+        }
+
+        /* Estilos da lista gerada dinamicamente */
+        .category-title {
+            font-size: 1.2rem;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 8px;
+            margin-top: 20px;
+            margin-bottom: 15px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .phrase-btn {
+            background-color: var(--surface);
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            padding: 15px 10px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 60px; 
+            font-weight: 500;
+        }
+
+        .phrase-btn:active {
+            background-color: var(--primary);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Comunicador</h1>
+            <button class="sos-btn" onclick="falar('Preciso de ajuda imediata!')">🚨 SOS</button>
+        </header>
+
+        <div class="admin-panel">
+            <h3>Adicionar Nova Categoria</h3>
+            <div class="form-group">
+                <input type="text" id="input-nova-categoria" placeholder="Ex: Sentimentos">
+                <button class="btn-add" onclick="adicionarCategoria()">Criar</button>
+            </div>
+
+            <h3>Adicionar Nova Frase</h3>
+            <div class="form-group">
+                <select id="select-categoria">
+                    </select>
+                <input type="text" id="input-nova-frase" placeholder="Ex: Estou cansado">
+                <button class="btn-add" onclick="adicionarFrase()">Salvar Frase</button>
+            </div>
+        </div>
+
+        <main id="app-content"></main>
+    </div>
+
+    <script>
+        // 1. DADOS INICIAIS E LOCALSTORAGE
+        // Tenta carregar do localStorage. Se não existir, usa esses dados padrão.
+        const dadosPadrao = [
+            {
+                id: Date.now().toString(), // Gera um ID único
+                nome: "Saudações",
+                frases: ["Olá, tudo bem?", "Bom dia", "Boa tarde", "Até logo"]
+            },
+            {
+                id: (Date.now() + 1).toString(),
+                nome: "Necessidades",
+                frases: ["Pode repetir, por favor?", "Preciso de água", "Onde fica o banheiro?"]
+            },
+            {
+                id: (Date.now() + 2).toString(),
+                nome: "Respostas Rápidas",
+                frases: ["Sim", "Não", "Talvez", "Não sei"]
+            }
+        ];
+
+        // Inicializa nosso "banco de dados" local
+        let dadosApp = JSON.parse(localStorage.getItem('comunicadorData')) || dadosPadrao;
+
+        // Função para salvar sempre que houver alteração
+        function salvarDados() {
+            localStorage.setItem('comunicadorData', JSON.stringify(dadosApp));
+            renderizarTela(); // Atualiza a tela após salvar
+        }
+
+        // 2. FUNÇÕES DE ADICIONAR (CRUD Básico)
+        function adicionarCategoria() {
+            const input = document.getElementById('input-nova-categoria');
+            const nomeCategoria = input.value.trim();
+
+            if (nomeCategoria !== "") {
+                const novaCat = {
+                    id: Date.now().toString(),
+                    nome: nomeCategoria,
+                    frases: [] // Começa sem frases
+                };
+                
+                dadosApp.push(novaCat);
+                input.value = ""; // Limpa o campo
+                salvarDados();
+            } else {
+                alert("Por favor, digite um nome para a categoria.");
+            }
+        }
+
+        function adicionarFrase() {
+            const select = document.getElementById('select-categoria');
+            const input = document.getElementById('input-nova-frase');
+            const idCategoriaSelecionada = select.value;
+            const textoFrase = input.value.trim();
+
+            if (textoFrase !== "" && idCategoriaSelecionada !== "") {
+                // Encontra a categoria correta pelo ID e adiciona a frase no array dela
+                const categoria = dadosApp.find(cat => cat.id === idCategoriaSelecionada);
+                if (categoria) {
+                    categoria.frases.push(textoFrase);
+                    input.value = ""; // Limpa o campo
+                    salvarDados();
+                }
+            } else {
+                alert("Por favor, selecione uma categoria e digite uma frase.");
+            }
+        }
+
+        // 3. RENDERIZAÇÃO DA TELA
+        // Transforma nossos dados em HTML e joga na tela
+        function renderizarTela() {
+            const main = document.getElementById('app-content');
+            const selectCategoria = document.getElementById('select-categoria');
+            
+            // Limpa tudo antes de desenhar de novo
+            main.innerHTML = "";
+            selectCategoria.innerHTML = "";
+
+            dadosApp.forEach(categoria => {
+                // Preenche o Select (dropdown) para adicionar frases
+                const option = document.createElement('option');
+                option.value = categoria.id;
+                option.textContent = categoria.nome;
+                selectCategoria.appendChild(option);
+
+                // Só desenha a categoria na tela principal se ela tiver frases
+                if (categoria.frases.length > 0) {
+                    // Cria o título da categoria
+                    const h2 = document.createElement('h2');
+                    h2.className = 'category-title';
+                    h2.textContent = categoria.nome;
+                    main.appendChild(h2);
+
+                    // Cria o grid de botões
+                    const grid = document.createElement('div');
+                    grid.className = 'grid';
+
+                    categoria.frases.forEach(frase => {
+                        const button = document.createElement('button');
+                        button.className = 'phrase-btn';
+                        button.textContent = frase;
+                        // O segredo do áudio está aqui: atrelamos a função falar() ao clique
+                        button.onclick = () => falar(frase);
+                        grid.appendChild(button);
+                    });
+
+                    main.appendChild(grid);
+                }
+            });
+        }
+
+        // 4. FUNCIONALIDADE DE VOZ (Text-to-Speech)
+        function falar(texto) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Para a fala anterior
+                const mensagem = new SpeechSynthesisUtterance(texto);
+                mensagem.lang = 'pt-BR'; 
+                window.speechSynthesis.speak(mensagem);
+            } else {
+                alert('Seu navegador não suporta a funcionalidade de voz.');
+            }
+        }
+
+        // 5. INICIALIZAÇÃO
+        // Quando a página carregar pela primeira vez, desenha a tela
+        renderizarTela();
+
+    </script>
+</body>
+</html>
