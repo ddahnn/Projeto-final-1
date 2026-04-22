@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  />
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="description" content="Aplicativo de comunicação fácil para pessoas não verbais." />
+  <title>Comunicador Inclusivo</title>
+
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="topbar">
+      <h1>Comunicador Inclusivo</h1>
+      <button id="btn-sos" class="sos-btn" type="button">
+        🚨 SOS
+      </button>
+    </header>
+
+    <main class="main-content">
+      <!-- TEXTO PARA ÁUDIO -->
+      <section class="panel">
+        <h2>Escrever para falar</h2>
+        <p class="panel-description">
+          Digite uma frase e toque em “Falar”.
+        </p>
+
+        <label for="input-texto-livre" class="sr-only">Digite a mensagem</label>
+        <textarea
+          id="input-texto-livre"
+          class="text-area"
+          placeholder="Digite aqui o que deseja comunicar..."
+          rows="4"
+        ></textarea>
+
+        <div class="action-row">
+          <button id="btn-falar-texto" class="btn-primary" type="button">
+            🔊 Falar
+          </button>
+          <button id="btn-limpar-texto" class="btn-secondary" type="button">
+            Limpar
+          </button>
+        </div>
+      </section>
+
+      <!-- ÁUDIO PARA TEXTO -->
+      <section class="panel listen-panel">
+        <h2>Ouvir e transcrever</h2>
+        <p class="panel-description">
+          No computador: segure o botão com o mouse.<br />
+          No celular: segure com o dedo e solte para parar.
+        </p>
+
+        <button id="btn-segurar-ouvir" class="btn-listen-hold" type="button">
+          🎤 Segure para ouvir
+        </button>
+
+        <div class="transcription-status" id="status-escuta">
+          Microfone parado
+        </div>
+
+        <div
+          id="texto-transcrito"
+          class="transcription-box"
+          aria-live="polite"
+        >
+          O texto transcrito aparecerá aqui...
+        </div>
+      </section>
+
+      <!-- FRASES RÁPIDAS -->
+      <section class="panel">
+        <h2>Frases rápidas</h2>
+
+        <div class="admin-panel">
+          <h3>Adicionar nova categoria</h3>
+          <div class="form-group">
+            <input
+              type="text"
+              id="input-nova-categoria"
+              placeholder="Ex: Sentimentos"
+            />
+            <button id="btn-criar-categoria" class="btn-primary" type="button">
+              Criar
+            </button>
+          </div>
+
+          <h3>Adicionar nova frase</h3>
+          <div class="form-group">
+            <select id="select-categoria"></select>
+            <input
+              type="text"
+              id="input-nova-frase"
+              placeholder="Ex: Estou cansado"
+            />
+            <button id="btn-salvar-frase" class="btn-primary" type="button">
+              Salvar frase
+            </button>
+          </div>
+        </div>
+
+        <div id="app-content"></div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
